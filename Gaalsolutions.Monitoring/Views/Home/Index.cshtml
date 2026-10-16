@@ -1,0 +1,259 @@
+@model Gaalsolutions.Monitoring.Models.DashboardViewModel
+
+@{
+    ViewData["Title"] = "Dashboard de Monitoreo";
+}
+
+<div class="dashboard-header">
+    <div>
+        <h1>GAALSOLUTIONS</h1>
+        <p>Plataforma Web de Monitoreo de Infraestructura</p>
+    </div>
+
+    <div class="zabbix-status">
+        <span class="status-dot"></span>
+        Fuente: @Model.SourceName
+    </div>
+</div>
+
+@* Todo el contenido del Dashboard vive en _DashboardLive.cshtml *@
+@await Html.PartialAsync("_DashboardLive", Model)
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        // Equipo elegido actualmente para el panel de tráfico.
+        let selectedHostId = @Model.SelectedHostId;
+
+        const MAX_POINTS = 60;      // puntos visibles en la gráfica
+        const REFRESH_MS = 5000;    // actualización cada 5 segundos
+
+        // Los datos llegan en bits por segundo (bps); aquí solo se formatean.
+        // Unidades decimales: 1 Kbps = 1000 bps.
+        function formatRate(bps) {
+            if (bps >= 1e9) return (bps / 1e9).toFixed(2) + ' Gbps';
+            if (bps >= 1e6) return (bps / 1e6).toFixed(2) + ' Mbps';
+            if (bps >= 1e3) return (bps / 1e3).toFixed(2) + ' Kbps';
+            return bps.toFixed(2) + ' bps';
+        }
+
+        const trafficChart = new Chart(document.getElementById('trafficChart'), {
+            type: 'line',
+
+            data: {
+                labels: [],
+
+                datasets: [
+                    {
+                        label: 'Descarga (RX)',
+                        data: [],
+                        borderColor: '#16a34a',
+                        backgroundColor: 'rgba(22, 163, 74, 0.12)',
+                        pointBackgroundColor: '#16a34a',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 3
+                    },
+                    {
+                        label: 'Subida (TX)',
+                        data: [],
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.12)',
+                        pointBackgroundColor: '#2563eb',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 3
+                    }
+                ]
+            },
+
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+
+                scales: {
+                    x: {
+                        ticks: { color: '#64748b' },
+                        grid: { color: 'rgba(100, 116, 139, 0.15)' }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(100, 116, 139, 0.15)' },
+                        ticks: {
+                            color: '#64748b',
+                            // El eje muestra la unidad más adecuada (bps, Kbps, Mbps...)
+                            callback: function (value) {
+                                return formatRate(value);
+                            }
+                        }
+                    }
+                },
+
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#475569',
+                            usePointStyle: true
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                return context.dataset.label + ': ' + formatRate(context.parsed.y);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        function addTrafficPoint(time, rx, tx) {
+            trafficChart.data.labels.push(time);
+            trafficChart.data.datasets[0].data.push(rx);
+            trafficChart.data.datasets[1].data.push(tx);
+
+            while (trafficChart.data.labels.length > MAX_POINTS) {
+                trafficChart.data.labels.shift();
+                trafficChart.data.datasets[0].data.shift();
+                trafficChart.data.datasets[1].data.shift();
+            }
+
+            trafficChart.update();
+        }
+
+        // Rellena la gráfica con el historial reciente del equipo elegido.
+        async function loadHistory(hostId) {
+            try {
+                const response = await fetch('/api/metrics/traffic/' + hostId + '/history', { cache: 'no-store' });
+
+                if (!response.ok) {
+                    return;
+                }
+
+                const history = await response.json();
+
+                // Si mientras tanto se eligió otro equipo, se descarta esta respuesta.
+                if (hostId !== selectedHostId) {
+                    return;
+                }
+
+                trafficChart.data.labels = history.points.map(function (p) { return p.time; });
+                trafficChart.data.datasets[0].data = history.points.map(function (p) { return p.rx; });
+                trafficChart.data.datasets[1].data = history.points.map(function (p) { return p.tx; });
+                trafficChart.update();
+            } catch (error) {
+                console.error('Error al cargar el historial de tráfico:', error);
+            }
+        }
+
+        async function refreshDashboard() {
+            const requestedId = selectedHostId;
+
+            try {
+                const response = await fetch('/Home/Live?hostId=' + requestedId, { cache: 'no-store' });
+
+                // Si la sesión expiró, se vuelve a cargar para ir al Login.
+                if (response.redirected) {
+                    window.location.reload();
+                    return;
+                }
+
+                if (!response.ok) {
+                    return;
+                }
+
+                const html = await response.text();
+
+                // Si mientras tanto se eligió otro equipo, se descarta esta respuesta.
+                if (requestedId !== selectedHostId) {
+                    return;
+                }
+
+                const doc = new DOMParser().parseFromString(html, 'text/html');
+
+                const top = doc.getElementById('live-top');
+                const traffic = doc.getElementById('live-traffic');
+                const bottom = doc.getElementById('live-bottom');
+                const data = doc.getElementById('live-data');
+
+                if (!top || !traffic || !bottom || !data) {
+                    return;
+                }
+
+                // Tarjetas, tablas y pie se reemplazan; la gráfica no se toca.
+                document.getElementById('live-top').innerHTML = top.innerHTML;
+                document.getElementById('live-traffic').innerHTML = traffic.innerHTML;
+                document.getElementById('live-bottom').innerHTML = bottom.innerHTML;
+
+                document.getElementById('traffic-subtitle').textContent = data.dataset.host
+                    ? data.dataset.host + ' · Interfaz ' + data.dataset.interface +
+                      (data.dataset.simulated === 'true' ? ' (simulado)' : '')
+                    : 'Sin equipo seleccionado';
+
+                document.getElementById('traffic-updated').textContent = data.dataset.sample;
+
+                // Solo se agrega un punto si hay un dato reciente y es distinto del último.
+                // (Zabbix puede entregar un dato nuevo cada pocos minutos, no cada 5 segundos.)
+                if (data.dataset.hasSample === 'true') {
+                    const labels = trafficChart.data.labels;
+                    const lastLabel = labels.length > 0 ? labels[labels.length - 1] : null;
+
+                    if (lastLabel !== data.dataset.sample) {
+                        addTrafficPoint(
+                            data.dataset.sample,
+                            parseFloat(data.dataset.rx),
+                            parseFloat(data.dataset.tx)
+                        );
+                    }
+                }
+            } catch (error) {
+                console.error('Error al actualizar el Dashboard:', error);
+            }
+        }
+
+        // Cambia el equipo cuyo tráfico se muestra.
+        async function selectHost(hostId, scrollToPanel) {
+            selectedHostId = hostId;
+
+            document.getElementById('hostSelect').value = hostId;
+
+            // Resalta la fila al instante (luego el servidor la vuelve a marcar).
+            document.querySelectorAll('#live-bottom tr.host-row').forEach(function (row) {
+                row.classList.toggle('selected', Number(row.dataset.hostId) === hostId);
+            });
+
+            if (scrollToPanel) {
+                document.getElementById('traffic-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+
+            await loadHistory(hostId);
+            await refreshDashboard();
+        }
+
+        // Selector desplegable del panel.
+        document.getElementById('hostSelect').addEventListener('change', function (e) {
+            selectHost(Number(e.target.value), false);
+        });
+
+        // Clic en una fila de la tabla. Se escucha en el contenedor porque
+        // las filas se vuelven a dibujar cada 5 segundos.
+        document.getElementById('live-bottom').addEventListener('click', function (e) {
+            const row = e.target.closest('tr.host-row');
+
+            if (!row) {
+                return;
+            }
+
+            selectHost(Number(row.dataset.hostId), true);
+        });
+
+        loadHistory(selectedHostId);
+        setInterval(refreshDashboard, REFRESH_MS);
+    </script>
+}

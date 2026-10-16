@@ -1,0 +1,312 @@
+@model Gaalsolutions.Monitoring.Models.ReportViewModel
+
+@{
+    ViewData["Title"] = "Reportes";
+
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+
+    // Convierte bits por segundo a un texto legible: bps, Kbps, Mbps o Gbps.
+    string FormatRate(double bps)
+    {
+        if (bps >= 1_000_000_000) return (bps / 1_000_000_000).ToString("0.00", inv) + " Gbps";
+        if (bps >= 1_000_000) return (bps / 1_000_000).ToString("0.00", inv) + " Mbps";
+        if (bps >= 1_000) return (bps / 1_000).ToString("0.00", inv) + " Kbps";
+        return bps.ToString("0.00", inv) + " bps";
+    }
+
+    var traffic = Model.Traffic;
+    var labelFormat = Model.PeriodHours <= 24 ? "HH:mm" : "dd/MM HH:mm";
+
+    var labels = traffic?.Points.Select(p => p.Time.ToString(labelFormat)).ToList() ?? new List<string>();
+    var rxData = traffic?.Points.Select(p => p.Rx).ToList() ?? new List<double>();
+    var txData = traffic?.Points.Select(p => p.Tx).ToList() ?? new List<double>();
+}
+
+<div class="dashboard-header">
+    <div>
+        <h1>Reportes de Monitoreo</h1>
+        <p>Tráfico de red y notificaciones por equipo y periodo</p>
+    </div>
+
+    <div class="zabbix-status">
+        <span class="status-dot"></span>
+        Fuente: @Model.SourceName
+    </div>
+</div>
+
+<div class="dashboard-section">
+    <h2>Filtros</h2>
+
+    <form method="get" class="traffic-header-actions">
+        <select name="hostId" class="traffic-select" aria-label="Equipo" onchange="this.form.submit()">
+            @foreach (var h in Model.Hosts)
+            {
+                <option value="@h.Id" selected="@(h.Id == Model.SelectedHostId)">@h.Name</option>
+            }
+        </select>
+
+        <select name="periodHours" class="traffic-select" aria-label="Periodo" onchange="this.form.submit()">
+            <option value="24" selected="@(Model.PeriodHours == 24)">Últimas 24 horas</option>
+            <option value="168" selected="@(Model.PeriodHours == 168)">Últimos 7 días</option>
+            <option value="720" selected="@(Model.PeriodHours == 720)">Últimos 30 días</option>
+        </select>
+    </form>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.SourceMessage))
+{
+    <div class="source-alert">@Model.SourceMessage</div>
+}
+
+@if (string.IsNullOrEmpty(Model.SelectedHostName))
+{
+    <div class="source-alert">No hay equipos disponibles para generar el reporte.</div>
+}
+else
+{
+    <div class="dashboard-section">
+        <h2>Tráfico de red · @Model.SelectedHostName</h2>
+
+        @if (!string.IsNullOrEmpty(Model.TrafficError))
+        {
+            <div class="source-alert">@Model.TrafficError</div>
+        }
+        else if (traffic == null || !traffic.HasData)
+        {
+            <div class="source-alert">
+                No hay datos de tráfico de este equipo para @Model.PeriodLabel.
+                Zabbix, el equipo o su agente pueden haber estado apagados.
+            </div>
+        }
+        else
+        {
+            <div class="table-container">
+                <table class="monitor-table">
+                    <thead>
+                        <tr>
+                            <th>Dirección</th>
+                            <th>Mínimo</th>
+                            <th>Media</th>
+                            <th>Máximo</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        <tr>
+                            <td><strong>↓ Descarga (RX)</strong></td>
+                            <td>@FormatRate(traffic.RxMin)</td>
+                            <td>@FormatRate(traffic.RxAvg)</td>
+                            <td>@FormatRate(traffic.RxMax)</td>
+                        </tr>
+
+                        <tr>
+                            <td><strong>↑ Subida (TX)</strong></td>
+                            <td>@FormatRate(traffic.TxMin)</td>
+                            <td>@FormatRate(traffic.TxAvg)</td>
+                            <td>@FormatRate(traffic.TxMax)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p class="table-hint" style="margin-top: 12px;">
+                @traffic.DataKind · @traffic.Samples muestras
+                @if (traffic.From.HasValue && traffic.To.HasValue)
+                {
+                    <text>· del @traffic.From.Value.ToString("dd/MM/yyyy HH:mm") al @traffic.To.Value.ToString("dd/MM/yyyy HH:mm")</text>
+                }
+                · La gráfica agrupa los datos; los valores de la tabla usan todas las muestras.
+            </p>
+
+            <div class="traffic-chart-card">
+                <div class="chart-container">
+                    <canvas id="reportChart"></canvas>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="dashboard-section">
+        <h2>Notificaciones enviadas · @Model.SelectedHostName</h2>
+
+        <div class="cards">
+            <div class="card-monitor">
+                <span>Total en el periodo</span>
+                <strong>@Model.Notifications.Count</strong>
+            </div>
+
+            <div class="card-monitor">
+                <span>Enviadas</span>
+                <strong>@Model.NotificationsSent</strong>
+            </div>
+
+            <div class="card-monitor danger">
+                <span>Fallidas</span>
+                <strong>@Model.NotificationsFailed</strong>
+            </div>
+
+            <div class="card-monitor warning">
+                <span>Pendientes</span>
+                <strong>@Model.NotificationsPending</strong>
+            </div>
+        </div>
+
+        <div class="table-container" style="margin-top: 20px;">
+            <table class="monitor-table">
+                <thead>
+                    <tr>
+                        <th>Fecha y hora</th>
+                        <th>Severidad</th>
+                        <th>Problema</th>
+                        <th>Destinatario</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @if (Model.Notifications.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="5">No hay notificaciones de este equipo en @Model.PeriodLabel.</td>
+                        </tr>
+                    }
+
+                    @foreach (var n in Model.Notifications)
+                    {
+                        <tr>
+                            <td>@n.SentAt.ToString("dd/MM/yyyy HH:mm:ss")</td>
+
+                            <td>
+                                @if (n.Severity == "Alta" || n.Severity == "Crítica")
+                                {
+                                    <span class="status problem">● @n.Severity</span>
+                                }
+                                else if (n.Severity == "Advertencia" || n.Severity == "Media")
+                                {
+                                    <span class="status warning">● @n.Severity</span>
+                                }
+                                else
+                                {
+                                    <span class="status">@n.Severity</span>
+                                }
+                            </td>
+
+                            <td>@n.Problem</td>
+                            <td>@n.Recipient</td>
+
+                            <td>
+                                @if (n.Status == "Enviado")
+                                {
+                                    <span class="status available">● Enviado</span>
+                                }
+                                else if (n.Status == "Fallido")
+                                {
+                                    <span class="status problem">● Fallido</span>
+                                }
+                                else
+                                {
+                                    <span class="status warning">● @n.Status</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    @if (traffic != null && traffic.HasData)
+    {
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+        <script>
+            const labels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(labels));
+            const rxData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(rxData));
+            const txData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(txData));
+
+            // Los datos llegan en bits por segundo (bps); aquí solo se formatean.
+            function formatRate(bps) {
+                if (bps >= 1e9) return (bps / 1e9).toFixed(2) + ' Gbps';
+                if (bps >= 1e6) return (bps / 1e6).toFixed(2) + ' Mbps';
+                if (bps >= 1e3) return (bps / 1e3).toFixed(2) + ' Kbps';
+                return bps.toFixed(2) + ' bps';
+            }
+
+            new Chart(document.getElementById('reportChart'), {
+                type: 'line',
+
+                data: {
+                    labels: labels,
+
+                    datasets: [
+                        {
+                            label: 'Descarga (RX)',
+                            data: rxData,
+                            borderColor: '#16a34a',
+                            backgroundColor: 'rgba(22, 163, 74, 0.12)',
+                            pointBackgroundColor: '#16a34a',
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 2
+                        },
+                        {
+                            label: 'Subida (TX)',
+                            data: txData,
+                            borderColor: '#2563eb',
+                            backgroundColor: 'rgba(37, 99, 235, 0.12)',
+                            pointBackgroundColor: '#2563eb',
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 2
+                        }
+                    ]
+                },
+
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+
+                    scales: {
+                        x: {
+                            ticks: { color: '#64748b', maxTicksLimit: 12 },
+                            grid: { color: 'rgba(100, 116, 139, 0.15)' }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(100, 116, 139, 0.15)' },
+                            ticks: {
+                                color: '#64748b',
+                                callback: function (value) {
+                                    return formatRate(value);
+                                }
+                            }
+                        }
+                    },
+
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#475569',
+                                usePointStyle: true
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    return context.dataset.label + ': ' + formatRate(context.parsed.y);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        </script>
+    }
+}

@@ -1,0 +1,435 @@
+html {
+  font-size: 14px;
+}
+
+@media (min-width: 768px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
+  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+}
+
+html {
+  position: relative;
+  min-height: 100%;
+}
+
+body {
+  margin-bottom: 60px;
+}
+
+.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
+  color: var(--bs-secondary-color);
+  text-align: end;
+}
+
+.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
+  text-align: start;
+}
+
+
+
+
+
+body {
+    background: #f4f6f9;
+    color: #1f2937;
+}
+
+.dashboard-header {
+    background: #172033;
+    color: white;
+    padding: 25px 30px;
+    border-radius: 12px;
+    margin-bottom: 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+    .dashboard-header h1 {
+        margin: 0;
+        font-size: 28px;
+        font-weight: 700;
+    }
+
+    .dashboard-header p {
+        margin: 5px 0 0;
+        color: #cbd5e1;
+    }
+
+.zabbix-status {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.status-dot {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    background: #22c55e;
+    border-radius: 50%;
+    margin-right: 7px;
+}
+
+.dashboard-section {
+    margin-bottom: 30px;
+}
+
+    .dashboard-section h2 {
+        font-size: 20px;
+        margin-bottom: 15px;
+    }
+
+.cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+}
+
+.card-monitor {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    border-left: 5px solid #2563eb;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+    .card-monitor.warning {
+        border-left-color: #f59e0b;
+    }
+
+    .card-monitor.danger {
+        border-left-color: #dc2626;
+    }
+
+    .card-monitor span {
+        display: block;
+        color: #64748b;
+        font-size: 14px;
+    }
+
+    .card-monitor strong {
+        display: block;
+        font-size: 32px;
+        margin-top: 8px;
+    }
+
+.metric-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+}
+
+.metric-card {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+    .metric-card span {
+        display: block;
+        color: #64748b;
+    }
+
+    .metric-card strong {
+        display: block;
+        font-size: 25px;
+        margin: 8px 0 12px;
+    }
+
+.progress {
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background: #2563eb;
+}
+
+.table-container {
+    overflow-x: auto;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.monitor-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+    .monitor-table th {
+        background: #172033;
+        color: white;
+        text-align: left;
+        padding: 14px;
+        font-size: 14px;
+    }
+
+    .monitor-table td {
+        padding: 14px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .monitor-table tbody tr:hover {
+        background: #f8fafc;
+    }
+
+.status {
+    font-weight: 600;
+}
+
+    .status.available {
+        color: #16a34a;
+    }
+
+    .status.warning {
+        color: #d97706;
+    }
+
+    .status.problem {
+        color: #dc2626;
+    }
+
+.dashboard-footer {
+    display: flex;
+    justify-content: space-between;
+    color: #64748b;
+    font-size: 13px;
+    padding: 15px 0 30px;
+}
+
+@media (max-width: 900px) {
+    .cards {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .metric-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+}
+
+.dashboard-chart {
+    margin-top: 25px;
+    margin-bottom: 25px;
+}
+
+.chart-container {
+    position: relative;
+    height: 320px;
+    width: 100%;
+}
+
+/* ===== Panel de consumo en tiempo real (RX / TX) ===== */
+
+.traffic-section .traffic-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+    .traffic-section .traffic-header h2 {
+        margin: 0;
+    }
+
+    .traffic-section .traffic-header p {
+        margin: 4px 0 0;
+        color: #64748b;
+        font-size: 13px;
+    }
+
+.traffic-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.traffic-select {
+    background: white;
+    color: #1f2937;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 14px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+    .traffic-select:focus {
+        outline: none;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+
+.traffic-updated {
+    background: white;
+    color: #64748b;
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-size: 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.traffic-chart-card {
+    background: white;
+    border-radius: 10px;
+    padding: 16px 18px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.traffic-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.traffic-card {
+    background: white;
+    padding: 18px 20px;
+    border-radius: 10px;
+    border-left: 5px solid #2563eb;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+    .traffic-card.rx {
+        border-left-color: #16a34a;
+    }
+
+    .traffic-card.tx {
+        border-left-color: #2563eb;
+    }
+
+    .traffic-card.max {
+        border-left-color: #f59e0b;
+    }
+
+    .traffic-card.small {
+        padding: 14px 20px;
+    }
+
+        .traffic-card.small .traffic-card-head {
+            margin-bottom: 0;
+        }
+
+        .traffic-card.small .traffic-label {
+            font-size: 13px;
+        }
+
+        .traffic-card.small .traffic-value {
+            font-size: 18px;
+        }
+
+.traffic-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.traffic-label {
+    color: #64748b;
+    font-size: 14px;
+}
+
+.traffic-value {
+    font-size: 22px;
+}
+
+    .traffic-value.rx {
+        color: #16a34a;
+    }
+
+    .traffic-value.tx {
+        color: #2563eb;
+    }
+
+    .traffic-value.max {
+        color: #d97706;
+    }
+
+.traffic-arrow {
+    font-size: 18px;
+    font-weight: 700;
+    margin-right: 6px;
+}
+
+    .traffic-arrow.rx {
+        color: #16a34a;
+    }
+
+    .traffic-arrow.tx {
+        color: #2563eb;
+    }
+
+.progress-bar.rx {
+    background: #16a34a;
+}
+
+.progress-bar.tx {
+    background: #2563eb;
+}
+
+/* ===== Tabla de dispositivos: ===== */
+
+.table-hint {
+    color: #64748b;
+    font-size: 13px;
+    margin: -8px 0 12px;
+}
+
+.monitor-table tbody tr.host-row {
+    cursor: pointer;
+}
+
+    .monitor-table tbody tr.host-row:hover {
+        background: #eff6ff;
+    }
+
+    .monitor-table tbody tr.host-row.selected {
+        background: #dbeafe;
+    }
+
+        .monitor-table tbody tr.host-row.selected td:first-child {
+            box-shadow: inset 4px 0 0 #2563eb;
+        }
+
+@media (max-width: 900px) {
+    .traffic-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .traffic-section .traffic-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+.source-alert {
+    background: #fffbeb;
+    color: #92400e;
+    border-left: 4px solid #f59e0b;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 14px;
+    margin-top: 15px;
+}

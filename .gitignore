@@ -1,0 +1,18 @@
+# Build output
+**/bin/
+**/obj/
+
+# IDE and local user files
+.vs/
+*.csproj.user
+*.suo
+
+# Local secrets and environment files
+.env
+.env.*
+**/secrets.json
+**/appsettings.*.local.json
+**/Properties/PublishProfiles/
+
+# Unrelated large local media
+/Gaalsolutions.Monitoring/WhatsApp Video 2026-10-10 at 9.21.28 PM.mp4

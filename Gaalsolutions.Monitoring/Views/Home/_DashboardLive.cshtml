@@ -1,0 +1,307 @@
+@model Gaalsolutions.Monitoring.Models.DashboardViewModel
+
+@{
+    // InvariantCulture: asegura punto decimal (12.5) en CSS y atributos data-*,
+    // sin importar el idioma de Windows.
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+
+    // Convierte bits por segundo a un texto legible: bps, Kbps, Mbps o Gbps.
+    // Sin dato: "—".
+    string FormatRate(double? value)
+    {
+        if (value is null) return "—";
+
+        var bps = value.Value;
+
+        if (bps >= 1_000_000_000) return (bps / 1_000_000_000).ToString("0.00", inv) + " Gbps";
+        if (bps >= 1_000_000) return (bps / 1_000_000).ToString("0.00", inv) + " Mbps";
+        if (bps >= 1_000) return (bps / 1_000).ToString("0.00", inv) + " Kbps";
+        return bps.ToString("0.00", inv) + " bps";
+    }
+
+    // Porcentaje del valor actual respecto a la tasa máxima (para las barras).
+    string Pct(double? value, double max)
+    {
+        return value.HasValue && max > 0
+            ? Math.Min(100, value.Value / max * 100).ToString("0.#", inv)
+            : "0";
+    }
+
+    // Porcentaje con texto ("34.5%") o "—" cuando no hay dato.
+    string Percent(double? value, string format = "0.#")
+    {
+        return value.HasValue ? value.Value.ToString(format, inv) + "%" : "—";
+    }
+
+    var rxPct = Pct(Model.RxBps, Model.MaxRxBps);
+    var txPct = Pct(Model.TxBps, Model.MaxTxBps);
+    var nowTime = DateTime.Now.ToString("HH:mm:ss");
+
+    // Hora del último dato de tráfico (la misma que usa la gráfica).
+    var sampleLabel = Model.TrafficSampleTime.HasValue
+        ? Gaalsolutions.Monitoring.Models.TrafficLabel.Format(Model.TrafficSampleTime.Value)
+        : "—";
+
+    var hasSample = Model.HasTrafficData ? "true" : "false";
+    var simulated = Model.IsSimulated ? "true" : "false";
+    var rxText = Math.Round(Model.RxBps ?? 0).ToString("0", inv);
+    var txText = Math.Round(Model.TxBps ?? 0).ToString("0", inv);
+
+    var interfaceText = string.IsNullOrEmpty(Model.SelectedInterface) ? "—" : Model.SelectedInterface;
+    var subtitle = string.IsNullOrEmpty(Model.SelectedHostName)
+        ? "Sin equipo seleccionado"
+        : Model.SelectedHostName + " · Interfaz " + interfaceText + (Model.IsSimulated ? " (simulado)" : "");
+}
+
+<div id="live-top">
+    <div class="dashboard-section">
+        <h2>Resumen de infraestructura</h2>
+
+        <div class="cards">
+            <div class="card-monitor">
+                <span>Hosts monitoreados</span>
+                <strong>@Model.TotalHosts</strong>
+            </div>
+
+            <div class="card-monitor">
+                <span>Disponibles</span>
+                <strong>@Model.AvailableHosts</strong>
+            </div>
+
+            <div class="card-monitor warning">
+                <span>Con problemas</span>
+                <strong>@Model.ProblemHosts</strong>
+            </div>
+
+            <div class="card-monitor danger">
+                <span>Alertas activas</span>
+                <strong>@Model.ActiveAlerts</strong>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@* La cabecera, el selector y la gráfica NO se reemplazan en cada actualización:
+   la gráfica se actualiza punto por punto desde JavaScript. Solo se reemplaza #live-traffic. *@
+<div class="dashboard-section traffic-section" id="traffic-panel">
+    <div class="traffic-header">
+        <div>
+            <h2>Consumo en tiempo real</h2>
+            <p id="traffic-subtitle">@subtitle</p>
+        </div>
+
+        <div class="traffic-header-actions">
+            <select id="hostSelect" class="traffic-select" aria-label="Seleccionar dispositivo">
+                @foreach (var h in Model.Hosts)
+                {
+                    <option value="@h.Id" selected="@(h.Id == Model.SelectedHostId)">@h.Name</option>
+                }
+            </select>
+
+            <div class="traffic-updated">
+                <span class="status-dot"></span>
+                Último dato: <span id="traffic-updated">@sampleLabel</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="traffic-chart-card">
+        <div class="chart-container">
+            <canvas id="trafficChart"></canvas>
+        </div>
+    </div>
+
+    <div id="live-traffic">
+        @if (!string.IsNullOrEmpty(Model.SourceMessage))
+        {
+            <div class="source-alert">@Model.SourceMessage</div>
+        }
+
+        @if (Model.SourceAvailable && !Model.HasTrafficData && !string.IsNullOrEmpty(Model.SelectedHostName))
+        {
+            <div class="source-alert">
+                Sin datos recientes de tráfico para este equipo. Zabbix, el equipo o su agente pueden estar apagados.
+            </div>
+        }
+
+        <div class="traffic-grid">
+            <div class="traffic-card rx">
+                <div class="traffic-card-head">
+                    <span class="traffic-label"><span class="traffic-arrow rx">↓</span>Descarga (RX)</span>
+                    <strong class="traffic-value rx">@FormatRate(Model.RxBps)</strong>
+                </div>
+
+                <div class="progress">
+                    <div class="progress-bar rx" style="width: @rxPct%"></div>
+                </div>
+            </div>
+
+            <div class="traffic-card tx">
+                <div class="traffic-card-head">
+                    <span class="traffic-label"><span class="traffic-arrow tx">↑</span>Subida (TX)</span>
+                    <strong class="traffic-value tx">@FormatRate(Model.TxBps)</strong>
+                </div>
+
+                <div class="progress">
+                    <div class="progress-bar tx" style="width: @txPct%"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="traffic-grid">
+            <div class="traffic-card max small">
+                <div class="traffic-card-head">
+                    <span class="traffic-label">Tasa máxima de descarga (RX) · @Model.MaxPeriodLabel</span>
+                    <strong class="traffic-value max">@FormatRate(Model.MaxRxBps)</strong>
+                </div>
+            </div>
+
+            <div class="traffic-card max small">
+                <div class="traffic-card-head">
+                    <span class="traffic-label">Tasa máxima de subida (TX) · @Model.MaxPeriodLabel</span>
+                    <strong class="traffic-value max">@FormatRate(Model.MaxTxBps)</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="live-bottom">
+    <div class="dashboard-section">
+        <h2>Estado de dispositivos</h2>
+        <p class="table-hint">Haz clic en un dispositivo para ver su tráfico en tiempo real.</p>
+
+        <div class="table-container">
+            <table class="monitor-table">
+                <thead>
+                    <tr>
+                        <th>Host</th>
+                        <th>Tipo</th>
+                        <th>Dirección IP</th>
+                        <th>Estado</th>
+                        <th>CPU</th>
+                        <th>Memoria</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach (var host in Model.Hosts)
+                    {
+                        var rowClass = host.Id == Model.SelectedHostId ? "host-row selected" : "host-row";
+
+                        <tr class="@rowClass" data-host-id="@host.Id" title="Ver tráfico de @host.Name">
+                            <td>
+                                <strong>@host.Name</strong>
+                            </td>
+
+                            <td>@host.Type</td>
+
+                            <td>
+                                <code>@host.IpAddress</code>
+                            </td>
+
+                            <td>
+                                @if (host.Status == "Disponible")
+                                {
+                                    <span class="status available">
+                                        ● Disponible
+                                    </span>
+                                }
+                                else if (host.Status == "Alerta")
+                                {
+                                    <span class="status warning">
+                                        ● Alerta
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="status problem">
+                                        ● Problema
+                                    </span>
+                                }
+                            </td>
+
+                            <td>@Percent(host.CpuUsage)</td>
+                            <td>@Percent(host.MemoryUsage)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="dashboard-section">
+        <h2>Alertas recientes</h2>
+
+        <div class="table-container">
+            <table class="monitor-table">
+                <thead>
+                    <tr>
+                        <th>Host</th>
+                        <th>Severidad</th>
+                        <th>Descripción</th>
+                        <th>Fecha y hora</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach (var alert in Model.Alerts)
+                    {
+                        <tr>
+                            <td><strong>@alert.HostName</strong></td>
+
+                            <td>
+                                @if (alert.Severity == "Alta" || alert.Severity == "Crítica")
+                                {
+                                    <span class="status problem">● @alert.Severity</span>
+                                }
+                                else if (alert.Severity == "Advertencia" || alert.Severity == "Media")
+                                {
+                                    <span class="status warning">● @alert.Severity</span>
+                                }
+                                else
+                                {
+                                    <span class="status">@alert.Severity</span>
+                                }
+                            </td>
+
+                            <td>@alert.Message</td>
+
+                            <td>
+                                @alert.DateTime.ToString("dd/MM/yyyy HH:mm")
+                            </td>
+
+                            <td>
+                                @if (alert.Status == "Activa")
+                                {
+                                    <span class="status problem">● Activa</span>
+                                }
+                                else
+                                {
+                                    <span class="status available">● Resuelta</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="dashboard-footer">
+        <span>Última consulta: @DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss")</span>
+        <span>Fuente de monitoreo: @Model.SourceName</span>
+    </div>
+</div>
+
+@* Punto actual del equipo elegido. El JavaScript lo lee en cada actualización. *@
+<div id="live-data" hidden
+     data-sample="@sampleLabel"
+     data-has-sample="@hasSample"
+     data-simulated="@simulated"
+     data-rx="@rxText"
+     data-tx="@txText"
+     data-host="@Model.SelectedHostName"
+     data-interface="@interfaceText"></div>

@@ -1,0 +1,177 @@
+@model LoginViewModel
+
+@{
+    Layout = null;
+    ViewData["Title"] = "Iniciar sesión";
+}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - GAALSOLUTIONS</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+
+    <style>
+        .login-body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            margin: 0;
+            background: #f4f6f9;
+        }
+
+        .login-wrapper {
+            width: 100%;
+            max-width: 420px;
+        }
+
+        .login-brand {
+            background: #172033;
+            color: white;
+            padding: 25px 30px;
+            border-radius: 12px 12px 0 0;
+        }
+
+            .login-brand h1 {
+                margin: 0;
+                font-size: 28px;
+                font-weight: 700;
+            }
+
+            .login-brand p {
+                margin: 5px 0 0;
+                color: #cbd5e1;
+                font-size: 14px;
+            }
+
+        .login-card {
+            background: white;
+            padding: 28px 30px 30px;
+            border-radius: 0 0 12px 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        }
+
+            .login-card h2 {
+                font-size: 20px;
+                margin: 0 0 4px;
+            }
+
+        .login-subtitle {
+            color: #64748b;
+            font-size: 14px;
+            margin-bottom: 22px;
+        }
+
+        .login-field {
+            margin-bottom: 16px;
+        }
+
+            .login-field label {
+                display: block;
+                font-size: 14px;
+                font-weight: 600;
+                margin-bottom: 6px;
+                color: #1f2937;
+            }
+
+            .login-field input {
+                width: 100%;
+                padding: 11px 12px;
+                border: 1px solid #cbd5e1;
+                border-radius: 8px;
+                font-size: 15px;
+            }
+
+                .login-field input:focus {
+                    outline: none;
+                    border-color: #2563eb;
+                    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+                }
+
+        .login-remember {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: #64748b;
+            margin: 4px 0 20px;
+        }
+
+        .login-button {
+            width: 100%;
+            padding: 12px;
+            background: #2563eb;
+            color: white;
+            border: 0;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+            .login-button:hover {
+                background: #1d4ed8;
+            }
+
+        .login-error {
+            background: #fef2f2;
+            color: #b91c1c;
+            border-left: 4px solid #dc2626;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 18px;
+        }
+
+            .login-error ul {
+                margin: 0;
+                padding-left: 18px;
+            }
+
+            .login-error.validation-summary-valid {
+                display: none;
+            }
+    </style>
+</head>
+<body class="login-body">
+    <main class="login-wrapper">
+        <div class="login-brand">
+            <h1>GAALSOLUTIONS</h1>
+            <p>Plataforma Web de Monitoreo de Infraestructura</p>
+        </div>
+
+        <div class="login-card">
+            <h2>Iniciar sesión</h2>
+            <p class="login-subtitle">Ingresa tus credenciales para acceder al panel.</p>
+
+            <form method="post" asp-controller="Account" asp-action="Login">
+                <input type="hidden" asp-for="ReturnUrl" />
+
+                <div asp-validation-summary="All" class="login-error"></div>
+
+                <div class="login-field">
+                    <label asp-for="Email"></label>
+                    <input asp-for="Email" autocomplete="username" autofocus />
+                </div>
+
+                <div class="login-field">
+                    <label asp-for="Password"></label>
+                    <input asp-for="Password" autocomplete="current-password" />
+                </div>
+
+                <label class="login-remember">
+                    <input asp-for="RememberMe" />
+                    Mantener la sesión iniciada
+                </label>
+
+                <button type="submit" class="login-button">Iniciar sesión</button>
+            </form>
+        </div>
+    </main>
+</body>
+</html>
