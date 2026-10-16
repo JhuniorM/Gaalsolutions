@@ -1,5 +1,6 @@
 using Gaalsolutions.Monitoring.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.AspNetCore.Identity;
 using Gaalsolutions.Monitoring.Models;
 using Gaalsolutions.Monitoring.Services;
@@ -31,7 +32,9 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 if (string.Equals(databaseProvider, "PostgreSql", StringComparison.OrdinalIgnoreCase))
 {
     builder.Services.AddDbContext<PostgreSqlApplicationDbContext>(options =>
-        options.UseNpgsql(connectionString));
+        options.UseNpgsql(connectionString)
+            .ConfigureWarnings(warnings =>
+                warnings.Log(RelationalEventId.PendingModelChangesWarning)));
     builder.Services.AddScoped<ApplicationDbContext>(sp =>
         sp.GetRequiredService<PostgreSqlApplicationDbContext>());
 }
