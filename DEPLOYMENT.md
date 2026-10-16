@@ -17,6 +17,11 @@ configurado (por defecto, `public`). Para el primer despliegue, usa un esquema
 sin tablas previas de esta aplicación. Esto crea el esquema inicial, pero no
 transfiere usuarios ni otros datos de la base local MySQL/MariaDB.
 
+Antes del primer despliegue PostgreSQL, abre **Supabase → SQL Editor**, ejecuta
+el contenido de [`database/postgresql-initial.sql`](./database/postgresql-initial.sql)
+una sola vez y confirma que termina sin errores. El script crea las tablas de
+Identity, `NotificationHistories` y `__EFMigrationsHistory`.
+
 ## 2. Desplegar en Railway
 
 Conecta el repositorio a Railway y deja el directorio raíz del servicio en la
@@ -39,11 +44,16 @@ Usa los valores exactos de **Connect** de Supabase en la cadena de conexión.
 Guárdala como variable secreta de Railway; no la añadas a `appsettings.json`,
 al repositorio ni a mensajes.
 
-Al arrancar, la aplicación ejecuta las migraciones PostgreSQL y crea la cuenta
-inicial si todavía no existe. Verifica el despliegue usando
-`/Account/Login` como ruta de comprobación HTTP. Después del primer arranque
-correcto, puedes quitar `BootstrapAdmin__Password` de Railway; la cuenta creada
-permanece en Supabase.
+La aplicación no aplica cambios de esquema automáticamente al arrancar. Crea
+el esquema inicial con el script SQL anterior antes de desplegar. Al arrancar,
+la aplicación crea la cuenta inicial si todavía no existe. Verifica el
+despliegue usando `/Account/Login` como ruta de comprobación HTTP. Después del
+primer arranque correcto, puedes quitar `BootstrapAdmin__Password` de Railway;
+la cuenta creada permanece en Supabase.
+
+Para futuros cambios del modelo, genera una migración PostgreSQL y revisa/aplica
+su SQL en Supabase antes de desplegar la versión que la requiere. No vuelvas a
+ejecutar el script inicial en una base que ya tenga esas tablas.
 
 El monitoreo usa datos simulados por defecto. Para conectar Zabbix, configura
 `Monitoring__Source=Zabbix`, `Zabbix__ApiUrl` y `Zabbix__ApiToken` en Railway.

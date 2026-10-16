@@ -125,8 +125,6 @@ async Task SeedAdminAsync(IServiceProvider scopedServices, string? email, string
 if (string.Equals(databaseProvider, "PostgreSql", StringComparison.OrdinalIgnoreCase))
 {
     await using var scope = app.Services.CreateAsyncScope();
-    var db = scope.ServiceProvider.GetRequiredService<PostgreSqlApplicationDbContext>();
-    await db.Database.MigrateAsync();
     await SeedAdminAsync(
         scope.ServiceProvider,
         builder.Configuration["BootstrapAdmin:Email"],
