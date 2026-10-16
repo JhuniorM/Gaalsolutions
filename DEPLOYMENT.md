@@ -21,7 +21,9 @@ transfiere usuarios ni otros datos de la base local MySQL/MariaDB.
 
 Conecta el repositorio a Railway y deja el directorio raíz del servicio en la
 raíz del repositorio. Railway usará el `Dockerfile` incluido. El contenedor
-escucha en la variable `PORT` que Railway proporciona.
+instala los certificados CA y la biblioteca GSSAPI de Kerberos requeridos por
+el runtime Linux y la conexión TLS de PostgreSQL, y escucha en la variable
+`PORT` que Railway proporciona.
 
 Configura estas variables en **Railway → Service → Variables**:
 
